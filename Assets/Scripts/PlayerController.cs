@@ -78,12 +78,12 @@ public class PlayerController : MonoBehaviour
         currentStam = stamMax;
     }
 
-    
+
     void Update()
     {
         PlayerMovement();
         HandleJump();
-        CancelJump();
+        //CancelJump();
         StateHandle();
         HandleStamina();
         StateSwitching();
@@ -111,13 +111,15 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKeyDown(jumpKey) && isGrounded)
         {
             Rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
-              
+            AN_Player.SetTrigger("JumpStart");
+            
+
         }
     }
 
     public void CancelJump() // Quand le joueur relache la touche Jump ==> Subit la graviter
     {
-        if(Input.GetKeyUp(jumpKey) && Rb.velocity.y > 0)
+        if (Input.GetKeyUp(jumpKey) && Rb.velocity.y > 0)
         {
             Rb.velocity = new Vector2(Rb.velocity.x, Rb.velocity.y * 0.1f);
         }
@@ -158,55 +160,126 @@ public class PlayerController : MonoBehaviour
          }*/
         #endregion
 
+        #region Code 1
+
+        /* float input = Input.GetAxis("Horizontal");
+
+         if (!isGrounded)
+         {
+             if (currentState != PlayerState.JumpStart && currentState != PlayerState.JumpLoop)
+             {
+                 currentState = PlayerState.JumpStart;
+             }
+             else
+             {
+                 currentState = PlayerState.JumpLoop;
+             }
+
+             wasInAir = true;
+         }
+         else
+         {
+             // Atterrissage après un saut
+             if (wasInAir)
+             {
+                 currentState = PlayerState.JumpEnd;
+                 wasInAir = false;
+             }
+             // Sprint
+             else if (Input.GetKey(sprintKey) && CurrentStam > 0 && Mathf.Abs(input) > 0.1f)
+             {
+                 currentState = PlayerState.Sprint;
+                 MoveSpeed = SprintSpeed;
+             }
+             // Walk
+             else if (Mathf.Abs(input) > 0.1f)
+             {
+                 currentState = PlayerState.Walking;
+                 MoveSpeed = WalkSpeed;
+             }
+             // Idle
+             else
+             {
+                 currentState = PlayerState.Idle;
+                 MoveSpeed = 0f;
+             }
+
+         }*/
+        #endregion
+
+        #region Code 2
         float input = Input.GetAxis("Horizontal");
 
-        // En l'air
         if (!isGrounded)
         {
-            currentState = PlayerState.JumpStart;
+            if (!WasInAir)
+            {
+                currentState = PlayerState.JumpStart;
+                WasInAir = true;
+            }
+            else if (Rb.velocity.y < 0)
+            {
+                currentState = PlayerState.JumpLoop;
+            }
         }
-        // Sprint
-        else if (Input.GetKey(sprintKey) && CurrentStam > 0 && Mathf.Abs(input) > 0.1f)
-        {
-            currentState = PlayerState.Sprint;
-            MoveSpeed = SprintSpeed;
-        }
-        // Walk
-        else if (Mathf.Abs(input) > 0.1f)
-        {
-            currentState = PlayerState.Walking;
-            MoveSpeed = WalkSpeed;
-        }
-        // Idle
         else
         {
-            currentState = PlayerState.Idle;
-            MoveSpeed = 0f;
+            if (WasInAir)
+            {
+                currentState = PlayerState.JumpEnd;
+                WasInAir = false;
+            }
+            else if (Input.GetKey(sprintKey) && CurrentStam > 0 && Mathf.Abs(input) > 0.1f)
+            {
+                currentState = PlayerState.Sprint;
+                MoveSpeed = SprintSpeed;
+            }
+            else if (Mathf.Abs(input) > 0.1f)
+            {
+                currentState = PlayerState.Walking;
+                MoveSpeed = WalkSpeed;
+            }
+            else
+            {
+                currentState = PlayerState.Idle;
+            }
         }
+        #endregion
 
+        
     }
 
     private void HandleStamina()
     {
-        
 
-        if(currentState == PlayerState.Sprint && currentStam > 0)
+
+        if (currentState == PlayerState.Sprint && currentStam > 0)
         {
             currentStam -= stamDrainRate * Time.deltaTime;
 
             // Si on a plus de stam, stop Sprinting
 
-            if(currentStam <= 0)
+            if (currentStam <= 0)
             {
                 currentStam = 0;
-                MoveSpeed =  walkSpeed;
+                MoveSpeed = walkSpeed;
                 currentState = PlayerState.Walking;
             }
+        }
+
+        else if (currentStam < stamMax)
+        {
+            currentStam += stamRegenRate * Time.deltaTime;
+            if (currentStam > stamMax) currentStam = stamMax;
         }
 
 
     }
 
+    public void AddStamina(float amount)
+    {
+        currentStam = Mathf.Clamp(currentStam + amount, 0, stamMax);
+    }
     private void ApplyGraviter()
     {
         if (Rb.velocity.y < 0)
@@ -217,21 +290,24 @@ public class PlayerController : MonoBehaviour
 
     private void StateSwitching()
     {
+
+        //ResetJumpBools();
+
         switch (CurrentState)
         {
             case PlayerState.Idle:
 
                 AN_Player.SetFloat("Speed", 0);
 
-                break;  
+                break;
 
-            case PlayerState.Walking : 
+            case PlayerState.Walking:
 
                 AN_Player.SetFloat("Speed", 2);
 
                 break;
 
-            case PlayerState.Sprint :
+            case PlayerState.Sprint:
 
                 AN_Player.SetFloat("Speed", 6);
 
@@ -239,26 +315,26 @@ public class PlayerController : MonoBehaviour
 
             case PlayerState.JumpStart:
 
-                AN_Player.SetBool("Jump", true);
-                StartCoroutine(Waiting());
-                
-              
+               // AN_Player.SetTrigger("JumpStart");
+
                 break;
 
-            case PlayerState.JumpLoop :
+            case PlayerState.JumpLoop:
+
+                AN_Player.SetTrigger("JumpLoop");
 
                 break;
 
             case PlayerState.JumpEnd:
+
+                AN_Player.SetTrigger("JumpEnd");
 
                 break;
 
         }
     }
 
-    private IEnumerator Waiting()
-    {
-        yield return new WaitForSeconds(2f);
-        AN_Player. SetBool("Jump",  false); 
-    }
+    
 }
+
+    
