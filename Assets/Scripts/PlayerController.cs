@@ -9,7 +9,9 @@ public class PlayerController : MonoBehaviour
         Idle,
         Walking,
         Sprint,
-        Air,
+        JumpStart,
+        JumpLoop,
+        JumpEnd,
     }
 
     private PlayerState currentState;
@@ -24,8 +26,8 @@ public class PlayerController : MonoBehaviour
 
     [Header("Parametre Movement")]
     [SerializeField] private float moveSpeed;
-    [SerializeField] private float walkSpeed;
-    [SerializeField] private float sprintSpeed;
+    [SerializeField] private float walkSpeed;    // Vitesse de marche
+    [SerializeField] private float sprintSpeed; // Vitesse de sprint
 
     [Header("Parametre Jump")]
     [SerializeField] private float jumpForce;
@@ -34,9 +36,12 @@ public class PlayerController : MonoBehaviour
     [Header("Parametre Stamina")]
     [SerializeField] private float currentStam;
     [SerializeField] private float stamMax;
+    [SerializeField] private float stamDrainRate;    // combien on perd par seconde en sprint
+    [SerializeField] private float stamRegenRate;  // combien on regagne par seconde au repos
 
     [Header("Booleen")]
     [SerializeField] private bool isGrounded;
+    [SerializeField] private bool wasInAir;
 
     [Header("Key Binding")]
     [SerializeField] private KeyCode sprintKey = KeyCode.LeftShift;
@@ -47,7 +52,7 @@ public class PlayerController : MonoBehaviour
     #region Encapsulation
     private PlayerState CurrentState { get => currentState; set => currentState = value; }
     public float MoveSpeed { get => moveSpeed; set => moveSpeed = value; }
-    public float CurrentStam { get => CurrentStam; set => Mathf.Clamp(currentStam, 0, stamMax); }
+    public float CurrentStam { get => currentStam; set => Mathf.Clamp(value, 0, stamMax); }
     public float StamMax { get => stamMax; set => Mathf.Max(0, stamMax); }
     public float WalkSpeed { get => walkSpeed; set => walkSpeed = value; }
     public float SprintSpeed { get => sprintSpeed; set => sprintSpeed = value; }
@@ -57,6 +62,10 @@ public class PlayerController : MonoBehaviour
     public Transform GroundCheck { get => groundCheck; set => groundCheck = value; }
     public LayerMask GroundLayer { get => groundLayer; set => groundLayer = value; }
     public Animator AN_Player { get => aN_Player; set => aN_Player = value; }
+    public float StamDrainRate { get => stamDrainRate; set => stamDrainRate = value; }
+    public float StamRegenRate { get => stamRegenRate; set => stamRegenRate = value; }
+    public float MoveInput { get => moveInput; set => moveInput = value; }
+    public bool WasInAir { get => wasInAir; set => wasInAir = value; }
 
 
     #endregion
@@ -66,6 +75,7 @@ public class PlayerController : MonoBehaviour
     {
         vecGravity = new Vector2(0, -Physics.gravity.y);
         Application.targetFrameRate = 144;
+        currentStam = stamMax;
     }
 
     
@@ -75,6 +85,7 @@ public class PlayerController : MonoBehaviour
         HandleJump();
         CancelJump();
         StateHandle();
+        HandleStamina();
         StateSwitching();
     }
 
@@ -88,10 +99,10 @@ public class PlayerController : MonoBehaviour
     public void PlayerMovement()
     {
         // Initialisation GetAxis
-        moveInput = Input.GetAxis("Horizontal") * MoveSpeed;
+        MoveInput = (Input.GetAxis("Horizontal"));
 
         // Movement Player uniquement sur l'axe X Left/right
-        Rb.velocity = new Vector2(moveInput, Rb.velocity.y);
+        Rb.velocity = new Vector2(MoveInput * MoveSpeed, Rb.velocity.y);
 
     }
 
@@ -100,6 +111,7 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKeyDown(jumpKey) && isGrounded)
         {
             Rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+              
         }
     }
 
@@ -113,26 +125,85 @@ public class PlayerController : MonoBehaviour
 
     public void StateHandle()
     {
-        // Mode - sprint
-        if(isGrounded && Input.GetKey(sprintKey) && isGrounded)
+        #region Ancien code
+        /* float input = Input.GetAxis("Horizontal");
+
+         // Mode - Idle
+         if (isGrounded)
+         {
+             CurrentState = PlayerState.Idle;
+
+
+         }
+
+         // Mode - sprint
+         if(isGrounded && Input.GetKey(sprintKey) && (CurrentStam > 0) && (Mathf.Abs(input)) > 0.1f)
+         {
+             Debug.Log("Sprint");
+             currentState = PlayerState.Sprint;
+             MoveSpeed = SprintSpeed;
+         }
+
+         // Mode - walking
+         else if (isGrounded && (Mathf.Abs(input) > 0.1f))
+         {
+             currentState = PlayerState.Walking;
+             MoveSpeed = WalkSpeed;
+         }
+
+         // Mode - JumpLoop
+         else
+         {
+             currentState = PlayerState.JumpLoop;
+         }*/
+        #endregion
+
+        float input = Input.GetAxis("Horizontal");
+
+        // En l'air
+        if (!isGrounded)
         {
-            Debug.Log("Sprint");
+            currentState = PlayerState.JumpStart;
+        }
+        // Sprint
+        else if (Input.GetKey(sprintKey) && CurrentStam > 0 && Mathf.Abs(input) > 0.1f)
+        {
             currentState = PlayerState.Sprint;
             MoveSpeed = SprintSpeed;
         }
-
-        // Mode - walking
-        else if (isGrounded)
+        // Walk
+        else if (Mathf.Abs(input) > 0.1f)
         {
             currentState = PlayerState.Walking;
             MoveSpeed = WalkSpeed;
         }
-
-        // Mode - Air
+        // Idle
         else
         {
-            currentState = PlayerState.Air;
+            currentState = PlayerState.Idle;
+            MoveSpeed = 0f;
         }
+
+    }
+
+    private void HandleStamina()
+    {
+        
+
+        if(currentState == PlayerState.Sprint && currentStam > 0)
+        {
+            currentStam -= stamDrainRate * Time.deltaTime;
+
+            // Si on a plus de stam, stop Sprinting
+
+            if(currentStam <= 0)
+            {
+                currentStam = 0;
+                MoveSpeed =  walkSpeed;
+                currentState = PlayerState.Walking;
+            }
+        }
+
 
     }
 
@@ -148,23 +219,46 @@ public class PlayerController : MonoBehaviour
     {
         switch (CurrentState)
         {
+            case PlayerState.Idle:
+
+                AN_Player.SetFloat("Speed", 0);
+
+                break;  
+
             case PlayerState.Walking : 
 
-                AN_Player.SetBool("Sprint", false); // Arrete l'animation Sprint
+                AN_Player.SetFloat("Speed", 2);
 
                 break;
 
             case PlayerState.Sprint :
 
-                AN_Player.SetBool("Sprint", true);
+                AN_Player.SetFloat("Speed", 6);
 
                 break;
 
+            case PlayerState.JumpStart:
 
-            case PlayerState.Air :
+                AN_Player.SetBool("Jump", true);
+                StartCoroutine(Waiting());
+                
+              
+                break;
+
+            case PlayerState.JumpLoop :
+
+                break;
+
+            case PlayerState.JumpEnd:
 
                 break;
 
         }
+    }
+
+    private IEnumerator Waiting()
+    {
+        yield return new WaitForSeconds(2f);
+        AN_Player. SetBool("Jump",  false); 
     }
 }
