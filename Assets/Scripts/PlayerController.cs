@@ -127,87 +127,7 @@ public class PlayerController : MonoBehaviour
 
     public void StateHandle()
     {
-        #region Ancien code
-        /* float input = Input.GetAxis("Horizontal");
-
-         // Mode - Idle
-         if (isGrounded)
-         {
-             CurrentState = PlayerState.Idle;
-
-
-         }
-
-         // Mode - sprint
-         if(isGrounded && Input.GetKey(sprintKey) && (CurrentStam > 0) && (Mathf.Abs(input)) > 0.1f)
-         {
-             Debug.Log("Sprint");
-             currentState = PlayerState.Sprint;
-             MoveSpeed = SprintSpeed;
-         }
-
-         // Mode - walking
-         else if (isGrounded && (Mathf.Abs(input) > 0.1f))
-         {
-             currentState = PlayerState.Walking;
-             MoveSpeed = WalkSpeed;
-         }
-
-         // Mode - JumpLoop
-         else
-         {
-             currentState = PlayerState.JumpLoop;
-         }*/
-        #endregion
-
-        #region Code 1
-
-        /* float input = Input.GetAxis("Horizontal");
-
-         if (!isGrounded)
-         {
-             if (currentState != PlayerState.JumpStart && currentState != PlayerState.JumpLoop)
-             {
-                 currentState = PlayerState.JumpStart;
-             }
-             else
-             {
-                 currentState = PlayerState.JumpLoop;
-             }
-
-             wasInAir = true;
-         }
-         else
-         {
-             // Atterrissage après un saut
-             if (wasInAir)
-             {
-                 currentState = PlayerState.JumpEnd;
-                 wasInAir = false;
-             }
-             // Sprint
-             else if (Input.GetKey(sprintKey) && CurrentStam > 0 && Mathf.Abs(input) > 0.1f)
-             {
-                 currentState = PlayerState.Sprint;
-                 MoveSpeed = SprintSpeed;
-             }
-             // Walk
-             else if (Mathf.Abs(input) > 0.1f)
-             {
-                 currentState = PlayerState.Walking;
-                 MoveSpeed = WalkSpeed;
-             }
-             // Idle
-             else
-             {
-                 currentState = PlayerState.Idle;
-                 MoveSpeed = 0f;
-             }
-
-         }*/
-        #endregion
-
-        #region Code 2
+       
         float input = Input.GetAxis("Horizontal");
 
         if (!isGrounded)
@@ -244,7 +164,7 @@ public class PlayerController : MonoBehaviour
                 currentState = PlayerState.Idle;
             }
         }
-        #endregion
+        
 
         
     }
