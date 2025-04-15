@@ -153,6 +153,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animator: {fileID: 7752246242311021139}
+  bonusPrefab: {fileID: 369181198457378733}
 --- !u!61 &5223947400578256086
 BoxCollider2D:
   m_ObjectHideFlags: 0
